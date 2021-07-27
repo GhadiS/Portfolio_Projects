@@ -202,7 +202,7 @@ ORDER by
 cast(new_cases as int) DESC
 --From the below data, we can see some kind of a trend that as new vaccines increase new cases decrease (there seems to be some sort of a negative correlation, but not too strong)
 
---Looking at the total vaccinated people with at least as a % of the population
+--Looking at the total vaccinated people as a % of the population
 SELECT
 deaths.location, deaths.date, deaths.population, vaccines.people_vaccinated, cast (vaccines.people_vaccinated as float)/ cast(deaths.population as float)*100 as total_vaccinated_people
 FROM Portoflio_Project_Alex_COVID..Covid_Deaths as deaths
@@ -217,7 +217,7 @@ date
 -- Here also, we can see a trend where total people vaccinated with at least one doze has reach 15% of the whole population, 
 --which is a very small percentage of the whole population.
 
---Looking at the fully vaccinated people with at least as a % of the population
+--Looking at the fully vaccinated as a % of the population
 SELECT
 deaths.location, deaths.date, deaths.population, vaccines.people_fully_vaccinated, cast (vaccines.people_fully_vaccinated as float)/ cast(deaths.population as float)*100 as fully_vaccinated_people
 FROM Portoflio_Project_Alex_COVID..Covid_Deaths as deaths
@@ -244,17 +244,18 @@ JOIN Portoflio_Project_Alex_COVID..Covid_Vaccines as vaccines
 WHERE deaths.continent is not null
 ORDER by 2, 3
 
--- Looking at the total vaccination rate per the total population of a country
-SELECT
-deaths.continent, deaths.location, deaths.date, deaths.population, vaccines.new_vaccinations,
-SUM (cast(vaccines.new_vaccinations as int)) OVER (Partition by deaths.location ORDER BY deaths.date) as Vaccinations_Rollout,
-(Vaccinations_Rollout/population)*100 -- We need to use a CTE or Temp table in order to be able to use the new "Vaccinations_Rollout" column created
-FROM Portoflio_Project_Alex_COVID..Covid_Deaths as deaths
-JOIN Portoflio_Project_Alex_COVID..Covid_Vaccines as vaccines
-	On deaths.location = vaccines.location 
-	AND deaths.date = vaccines.date
-WHERE deaths.continent is not null
-ORDER by 2, 3
+-- Looking at the total vaccination available per the total population of a country (in a daily cumulative form to get a better idea of the daily change in rate)
+
+--SELECT
+--deaths.continent, deaths.location, deaths.date, deaths.population, vaccines.new_vaccinations,
+--SUM (cast(vaccines.new_vaccinations as int)) OVER (Partition by deaths.location ORDER BY deaths.date) as Vaccinations_Rollout,
+--(Vaccinations_Rollout/population)*100 -- We need to use a CTE or Temp table in order to be able to use the new "Vaccinations_Rollout" column created
+--FROM Portoflio_Project_Alex_COVID..Covid_Deaths as deaths
+--JOIN Portoflio_Project_Alex_COVID..Covid_Vaccines as vaccines
+--	On deaths.location = vaccines.location 
+--	AND deaths.date = vaccines.date
+--WHERE deaths.continent is not null
+--ORDER by 2, 3
 
 -- USE CTE
 With Pop_vs_Vac (continent, location, date, population, new_vaccinations, Vaccinations_Rollout)
@@ -274,15 +275,16 @@ SELECT
 *, (Vaccinations_Rollout/population)*100 as Rate_of_Population_Vaccinated
 FROM 
 Pop_vs_Vac
+WHERE location = 'Lebanon'
+-- We can see that for Lebanon theree are only 1,564,303 vaccines available in total. If by 7/22/2021 we have used all of our vaccines to vaccinate people, only 22% would be vaccianted with only 1 shot (not fully vaccinated)
+-- Which in turn means that only 11% of the population could be fully vaccinated.
 
+-- Creating Views to store in the database for Visualization Later
 
--- Creating Views for Visualization Later
-
-Create View Percent_of_PopulationVaccinated as
+Create View Percent_of_Population_Vaccinated as
 SELECT
 deaths.continent, deaths.location, deaths.date, deaths.population, vaccines.new_vaccinations,
 SUM (cast(vaccines.new_vaccinations as int)) OVER (Partition by deaths.location ORDER BY deaths.date) as Vaccinations_Rollout
---,(Vaccinations_Rollout/population)*100 -- We need to use a CTE or Temp table in order to be able to use the new "Vaccinations_Rollout" column created
 FROM Portoflio_Project_Alex_COVID..Covid_Deaths as deaths
 JOIN Portoflio_Project_Alex_COVID..Covid_Vaccines as vaccines
 	On deaths.location = vaccines.location 
